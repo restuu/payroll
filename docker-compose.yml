@@ -1,0 +1,48 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      # --- Application Configuration ---
+      - APP_ENV=${APP_ENV:-development}
+      # Server host must be 0.0.0.0 to be accessible from outside the container
+      - SERVER_HOST=0.0.0.0
+      # --- Database Connection (from app's perspective) ---
+      # The hostname 'db' is the service name of our postgres container
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+      - DATABASE_USER=${POSTGRES_USER:-dev_user}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-dev_password}
+      - DATABASE_DBNAME=${POSTGRES_DB:-payroll_dev_db}
+    depends_on:
+      db:
+        condition: service_healthy # Wait for db to be ready to accept connections
+    networks:
+      - payroll-net
+
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      # These variables are sourced from your shell or a .env file
+      - POSTGRES_USER=${POSTGRES_USER:-dev_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-dev_password}
+      - POSTGRES_DB=${POSTGRES_DB:-payroll_dev_db}
+    ports:
+      - "5433:5432" # Map to a different host port to avoid local conflicts
+    volumes:
+      - ./.docker/postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dev_user} -d ${POSTGRES_DB:-payroll_dev_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - payroll-net
+
+networks:
+  payroll-net:
+    driver: bridge

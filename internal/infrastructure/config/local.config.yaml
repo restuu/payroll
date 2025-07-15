@@ -1,0 +1,12 @@
+server:
+  port: 8080
+  host: "localhost"
+
+database:
+  host: "localhost"
+  port: 5432
+  user: "postgres"
+  password: "password"
+  dbname: "payroll_db"
+  sslmode: "disable"
+`
