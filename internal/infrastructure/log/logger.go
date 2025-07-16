@@ -2,7 +2,6 @@ package log
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 
@@ -51,8 +50,6 @@ func SetDefaultLogger(cfg *config.Config) *slog.Logger {
 	contextHandler := &ContextJSONHandler{
 		jsonHandler: jsonHandler,
 	}
-
-	fmt.Println(".,.,.,.,.,.,.,.,.,")
 
 	logger := slog.New(contextHandler).With(
 		slog.String("app", cfg.App.Name),

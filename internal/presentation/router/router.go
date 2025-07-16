@@ -4,6 +4,9 @@ import (
 	"log/slog"
 	"net/http"
 
+	"payroll/internal/app"
+	attendancehttp "payroll/internal/app/attendance/delivery/http"
+	authhttp "payroll/internal/app/auth/delivery/http"
 	"payroll/internal/infrastructure/config"
 	"payroll/internal/presentation/middleware"
 
@@ -11,7 +14,7 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 )
 
-func NewRouter(cfg *config.Config, logger *slog.Logger) chi.Router {
+func NewRouter(cfg *config.Config, logger *slog.Logger, services *app.Services) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(chimiddleware.RealIP)
@@ -22,6 +25,9 @@ func NewRouter(cfg *config.Config, logger *slog.Logger) chi.Router {
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("pong"))
 	})
+
+	authhttp.RegisterAuthRoutes(r, services.AuthService)
+	attendancehttp.RegisterAttendanceRoutes(r, services.AttendanceService)
 
 	return r
 }

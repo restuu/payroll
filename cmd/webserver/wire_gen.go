@@ -7,7 +7,11 @@
 package main
 
 import (
+	"payroll/internal/app"
+	"payroll/internal/app/attendance/service"
+	service2 "payroll/internal/app/auth/service"
 	"payroll/internal/infrastructure/config"
+	"payroll/internal/infrastructure/database/postgres"
 	"payroll/internal/infrastructure/log"
 	"payroll/internal/presentation/router"
 	"payroll/internal/presentation/server"
@@ -22,7 +26,18 @@ func NewWebServer() (*WebServer, error) {
 	}
 	serverConfig := configConfig.Server
 	logger := log.SetDefaultLogger(configConfig)
-	chiRouter := router.NewRouter(configConfig, logger)
+	databaseConfig := configConfig.Database
+	querier, err := postgres.Connect(databaseConfig)
+	if err != nil {
+		return nil, err
+	}
+	attendanceService := service.NewAttendanceService(querier)
+	authService := service2.NewAuthService(querier)
+	services := &app.Services{
+		AttendanceService: attendanceService,
+		AuthService:       authService,
+	}
+	chiRouter := router.NewRouter(configConfig, logger, services)
 	httpServer := server.NewServer(serverConfig, chiRouter)
 	webServer := &WebServer{
 		cfg: configConfig,

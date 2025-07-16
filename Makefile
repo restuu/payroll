@@ -3,8 +3,9 @@
 # Define the output binary name
 BINARY_NAME=payroll-server
 BINARY_PATH=out/$(BINARY_NAME)
+FILENAME=
 
-.PHONY: all test build service-up run clean
+.PHONY: all test build service-up run clean wire
 
 all: build
 
@@ -28,3 +29,15 @@ service-up:
 run: build
 	@echo "Running binary from $(BINARY_PATH)..."
 	./$(BINARY_PATH)
+
+wire:
+	go tool wire ./cmd/webserver/...
+
+migration-create:
+	./script/migration_create ${FILENAME}
+
+migration-up:
+	./script/migration_up
+
+sql-generate:
+	go tool sqlc generate

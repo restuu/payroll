@@ -1,6 +1,13 @@
 package main
 
-import "log"
+import (
+	"log"
+	"time"
+)
+
+func init() {
+	time.Local = time.FixedZone("Asia/Jakarta", 7*60*60)
+}
 
 func main() {
 	ws, err := NewWebServer()
