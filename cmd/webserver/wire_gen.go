@@ -9,6 +9,7 @@ package main
 import (
 	"payroll/internal/app"
 	"payroll/internal/app/attendance/service"
+	"payroll/internal/app/auth/repository"
 	service2 "payroll/internal/app/auth/service"
 	"payroll/internal/infrastructure/config"
 	"payroll/internal/infrastructure/database/postgres"
@@ -32,7 +33,9 @@ func NewWebServer() (*WebServer, error) {
 		return nil, err
 	}
 	attendanceService := service.NewAttendanceService(querier)
-	authService := service2.NewAuthService(querier)
+	authConfig := configConfig.Auth
+	authRepository := repository.NewAuthRepository(querier)
+	authService := service2.NewAuthService(authConfig, authRepository)
 	services := &app.Services{
 		AttendanceService: attendanceService,
 		AuthService:       authService,

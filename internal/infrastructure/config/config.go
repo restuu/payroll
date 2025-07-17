@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 )
 
@@ -17,6 +18,7 @@ type Config struct {
 	App      AppConfig      `mapstructure:"app" yaml:"app"`
 	Server   ServerConfig   `mapstructure:"server" yaml:"server"`
 	Database DatabaseConfig `mapstructure:"database" yaml:"database"`
+	Auth     AuthConfig     `mapstructure:"auth" yaml:"auth" validate:"required"`
 }
 
 type AppConfig struct {
@@ -39,6 +41,11 @@ type DatabaseConfig struct {
 	Password string `mapstructure:"password" yaml:"password"`
 	DBName   string `mapstructure:"dbname" yaml:"dbname"`
 	SSLMode  string `mapstructure:"sslmode" yaml:"sslmode"`
+}
+
+type AuthConfig struct {
+	JWTSecret string        `mapstructure:"jwt_secret" yaml:"jwt_secret" validate:"required"`
+	JWTExpiry time.Duration `mapstructure:"jwt_expiry" yaml:"jwt_expiry" validate:"required"`
 }
 
 // AppEnvKey is the environment variable key to determine the deployment environment.
@@ -90,6 +97,12 @@ func LoadConfig() (*Config, error) {
 	// 4. Unmarshal the final configuration into the struct.
 	if err := v.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	val := validator.New(validator.WithRequiredStructEnabled())
+
+	if err := val.Struct(config); err != nil {
+		return nil, fmt.Errorf("failed to validate config: %w", err)
 	}
 
 	return &config, nil

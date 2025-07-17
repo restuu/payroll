@@ -9,7 +9,6 @@ import (
 	"payroll/internal/app"
 	"payroll/internal/app/attendance"
 	attendancemodule "payroll/internal/app/attendance/module"
-	"payroll/internal/app/auth"
 	authmodule "payroll/internal/app/auth/module"
 	"payroll/internal/infrastructure/config"
 	"payroll/internal/infrastructure/database/postgres"
@@ -29,10 +28,10 @@ func NewWebServer() (*WebServer, error) {
 		log.SetDefaultLogger,
 		wire.FieldsOf(new(*config.Config), "Database"),
 		postgres.Connect,
+		wire.FieldsOf(new(*config.Config), "Auth"),
 
 		wire.Bind(new(attendance.AttendanceRepository), new(repository.Querier)),
 		attendancemodule.AttendanceModule,
-		wire.Bind(new(auth.EmployeeRepository), new(repository.Querier)),
 		authmodule.AuthModule,
 
 		wire.Struct(new(app.Services), "*"),

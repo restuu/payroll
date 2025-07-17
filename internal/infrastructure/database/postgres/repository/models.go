@@ -71,8 +71,9 @@ func (e AttendanceType) Valid() bool {
 type RoleType string
 
 const (
-	RoleTypeADMIN RoleType = "ADMIN"
-	RoleTypeUSER  RoleType = "USER"
+	RoleTypeSUPERUSER RoleType = "SUPERUSER"
+	RoleTypeADMIN     RoleType = "ADMIN"
+	RoleTypeUSER      RoleType = "USER"
 )
 
 func (e *RoleType) Scan(src interface{}) error {
@@ -112,7 +113,8 @@ func (ns NullRoleType) Value() (driver.Value, error) {
 
 func (e RoleType) Valid() bool {
 	switch e {
-	case RoleTypeADMIN,
+	case RoleTypeSUPERUSER,
+		RoleTypeADMIN,
 		RoleTypeUSER:
 		return true
 	}

@@ -39,5 +39,8 @@ migration-create:
 migration-up:
 	./script/migration_up
 
+migration-down:
+	./script/migration_down
+
 sql-generate:
 	go tool sqlc generate

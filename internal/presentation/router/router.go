@@ -20,14 +20,17 @@ func NewRouter(cfg *config.Config, logger *slog.Logger, services *app.Services) 
 	r.Use(chimiddleware.RealIP)
 	r.Use(middleware.RequestID())
 	r.Use(middleware.RequestLogger(cfg, logger))
+	r.Use(chimiddleware.StripSlashes)
 	r.Use(middleware.Cors())
 
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("pong"))
 	})
 
-	authhttp.RegisterAuthRoutes(r, services.AuthService)
-	attendancehttp.RegisterAttendanceRoutes(r, services.AttendanceService)
+	r.Route("/api", func(r chi.Router) {
+		authhttp.RegisterAuthRoutes(r, services.AuthService)
+		attendancehttp.RegisterAttendanceRoutes(r, services.AttendanceService)
+	})
 
 	return r
 }

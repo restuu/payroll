@@ -4,7 +4,7 @@
 -- outside of a transaction.
 CREATE TYPE attendance_type AS ENUM ('CLOCK_IN', 'CLOCK_OUT', 'OVERTIME_IN', 'OVERTIME_OUT');
 -- Create a new ENUM type for user roles.
-CREATE TYPE role_type AS ENUM ('ADMIN', 'USER');
+CREATE TYPE role_type AS ENUM ('SUPERUSER', 'ADMIN', 'USER');
 -- +goose StatementEnd
 
 -- +goose StatementBegin
@@ -58,6 +58,12 @@ CREATE TRIGGER set_updated_at_role
     ON role
     FOR EACH ROW
 EXECUTE PROCEDURE set_updated_at_now();
+
+INSERT INTO role(name, created_by, updated_by)
+VALUES
+	('SUPERUSER', 'SYSTEM', 'SYSTEM'),
+	('ADMIN', 'SYSTEM', 'SYSTEM'),
+	('USER', 'SYSTEM', 'SYSTEM');
 
 CREATE TABLE IF NOT EXISTS employee_role
 (

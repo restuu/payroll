@@ -61,3 +61,7 @@ func SetDefaultLogger(cfg *config.Config) *slog.Logger {
 
 	return logger
 }
+
+func WithErrorAttr(err error) slog.Attr {
+	return slog.String("error", err.Error())
+}

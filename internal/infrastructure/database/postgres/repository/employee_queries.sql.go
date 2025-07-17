@@ -32,6 +32,28 @@ func (q *Queries) FindEmployeeByID(ctx context.Context, id int32) (*Employee, er
 	return &i, err
 }
 
+const findEmployeeByUsername = `-- name: FindEmployeeByUsername :one
+SELECT id, username, password, salary, created_at, created_by, updated_at, updated_by
+FROM employee
+WHERE username = $1
+`
+
+func (q *Queries) FindEmployeeByUsername(ctx context.Context, username string) (*Employee, error) {
+	row := q.db.QueryRow(ctx, findEmployeeByUsername, username)
+	var i Employee
+	err := row.Scan(
+		&i.ID,
+		&i.Username,
+		&i.Password,
+		&i.Salary,
+		&i.CreatedAt,
+		&i.CreatedBy,
+		&i.UpdatedAt,
+		&i.UpdatedBy,
+	)
+	return &i, err
+}
+
 const insertEmployee = `-- name: InsertEmployee :exec
 INSERT INTO employee (username, password, salary, created_by, updated_by)
 VALUES ($1, $2, $3, $4, $5)
@@ -50,6 +72,32 @@ func (q *Queries) InsertEmployee(ctx context.Context, arg *InsertEmployeeParams)
 		arg.Username,
 		arg.Password,
 		arg.Salary,
+		arg.CreatedBy,
+		arg.UpdatedBy,
+	)
+	return err
+}
+
+const insertEmployeeRole = `-- name: InsertEmployeeRole :exec
+INSERT INTO employee_role(employee_id, role_id, created_by, updated_by)
+VALUES (
+        (select id from employee where username = $1),
+        (select id from role where name = $2),
+        $3,
+        $4)
+`
+
+type InsertEmployeeRoleParams struct {
+	Username  string   `db:"username"`
+	RoleName  RoleType `db:"role_name"`
+	CreatedBy string   `db:"created_by"`
+	UpdatedBy string   `db:"updated_by"`
+}
+
+func (q *Queries) InsertEmployeeRole(ctx context.Context, arg *InsertEmployeeRoleParams) error {
+	_, err := q.db.Exec(ctx, insertEmployeeRole,
+		arg.Username,
+		arg.RoleName,
 		arg.CreatedBy,
 		arg.UpdatedBy,
 	)
