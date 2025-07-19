@@ -41,7 +41,7 @@ func (c *ContextJSONHandler) Handle(ctx context.Context, r slog.Record) error {
 func SetDefaultLogger(cfg *config.Config) *slog.Logger {
 	env := cfg.App.Env
 
-	logFormat := httplog.SchemaOTEL
+	logFormat := httplog.SchemaECS
 
 	jsonHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		ReplaceAttr: logFormat.ReplaceAttr,

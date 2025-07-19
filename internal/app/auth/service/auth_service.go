@@ -11,8 +11,8 @@ import (
 	"payroll/internal/app/common/role"
 	"payroll/internal/infrastructure/config"
 	"payroll/internal/infrastructure/database/postgres/repository"
+	"payroll/pkg/jwt"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -20,15 +20,18 @@ import (
 type AuthService struct {
 	cfg                config.AuthConfig
 	employeeRepository auth.AuthRepository
+	jwt                jwt.JWT[*dto.JWTClaims]
 }
 
 func NewAuthService(
 	cfg config.AuthConfig,
 	employeeRepository auth.AuthRepository,
+	jwt jwt.JWT[*dto.JWTClaims],
 ) *AuthService {
 	return &AuthService{
 		cfg:                cfg,
 		employeeRepository: employeeRepository,
+		jwt:                jwt,
 	}
 }
 
@@ -101,39 +104,24 @@ func (a *AuthService) Login(ctx context.Context, req dto.LoginRequest) (res *dto
 	expiresAt := time.Now().Add(a.cfg.JWTExpiry)
 
 	claims := &dto.JWTClaims{
-		Username: employee.Username,
+		JWTPayloads: dto.JWTPayloads{
+			Username: employee.Username,
+		},
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			ID:        uuid.New().String(),
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	tokenString, err := token.SignedString([]byte(a.cfg.JWTSecret))
+	token, err := a.jwt.SignClaims(claims)
 	if err != nil {
 		return nil, fmt.Errorf("AuthService.Login failed to sign token: %w", err)
 	}
 
 	res = &dto.LoginResult{
-		AccessToken: tokenString,
+		AccessToken: token,
 		ExpiresAt:   expiresAt.Format(time.RFC3339),
 	}
 
 	return res, nil
-}
-
-func (a *AuthService) ParseJWTToken(_ context.Context, tokenString string) (res *dto.JWTClaims, err error) {
-	token, err := jwt.ParseWithClaims(tokenString, &dto.JWTClaims{}, func(token *jwt.Token) (any, error) {
-		return []byte(a.cfg.JWTSecret), nil
-	})
-	if err != nil {
-		return nil, apperror.ErrUnauthorized.WithError(fmt.Errorf("AuthService.ParseJWTToken failed to parse token: %w", err))
-	}
-	claims, ok := token.Claims.(*dto.JWTClaims)
-	if !ok {
-		return nil, apperror.ErrUnauthorized.WithError(fmt.Errorf("AuthService.ParseJWTToken unknown claims: %w", err))
-	}
-
-	return claims, nil
 }

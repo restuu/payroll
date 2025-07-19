@@ -9,13 +9,17 @@ package main
 import (
 	"payroll/internal/app"
 	"payroll/internal/app/attendance/service"
+	"payroll/internal/app/auth/dto"
 	"payroll/internal/app/auth/repository"
 	service2 "payroll/internal/app/auth/service"
 	"payroll/internal/infrastructure/config"
 	"payroll/internal/infrastructure/database/postgres"
 	"payroll/internal/infrastructure/log"
+	"payroll/internal/presentation"
+	"payroll/internal/presentation/middleware"
 	"payroll/internal/presentation/router"
 	"payroll/internal/presentation/server"
+	"payroll/pkg/jwt"
 )
 
 // Injectors from wire.go:
@@ -27,6 +31,11 @@ func NewWebServer() (*WebServer, error) {
 	}
 	serverConfig := configConfig.Server
 	logger := log.SetDefaultLogger(configConfig)
+	jwt := ProvideJWT(configConfig)
+	jwtAuthMiddleware := middleware.WithJWTAuth(jwt)
+	middlewares := &presentation.Middlewares{
+		WithJWTAuth: jwtAuthMiddleware,
+	}
 	databaseConfig := configConfig.Database
 	querier, err := postgres.Connect(databaseConfig)
 	if err != nil {
@@ -35,16 +44,24 @@ func NewWebServer() (*WebServer, error) {
 	attendanceService := service.NewAttendanceService(querier)
 	authConfig := configConfig.Auth
 	authRepository := repository.NewAuthRepository(querier)
-	authService := service2.NewAuthService(authConfig, authRepository)
+	authService := service2.NewAuthService(authConfig, authRepository, jwt)
 	services := &app.Services{
 		AttendanceService: attendanceService,
 		AuthService:       authService,
 	}
-	chiRouter := router.NewRouter(configConfig, logger, services)
+	chiRouter := router.NewRouter(configConfig, logger, middlewares, services)
 	httpServer := server.NewServer(serverConfig, chiRouter)
 	webServer := &WebServer{
 		cfg: configConfig,
 		srv: httpServer,
 	}
 	return webServer, nil
+}
+
+// wire.go:
+
+func ProvideJWT(cfg *config.Config) jwt.JWT[*dto.JWTClaims] {
+	return jwt.NewJWT[*dto.JWTClaims](jwt.Config{
+		SecretKey: cfg.Auth.JWTSecret,
+	})
 }

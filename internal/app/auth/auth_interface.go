@@ -16,5 +16,4 @@ type AuthRepository interface {
 type AuthService interface {
 	RegisterNewEmployee(ctx context.Context, params dto.RegisterNewEmployeeParams) (err error)
 	Login(ctx context.Context, req dto.LoginRequest) (res *dto.LoginResult, err error)
-	ParseJWTToken(ctx context.Context, tokenString string) (res *dto.JWTClaims, err error)
 }

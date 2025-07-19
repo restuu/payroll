@@ -8,13 +8,19 @@ import (
 	attendancehttp "payroll/internal/app/attendance/delivery/http"
 	authhttp "payroll/internal/app/auth/delivery/http"
 	"payroll/internal/infrastructure/config"
+	"payroll/internal/presentation"
 	"payroll/internal/presentation/middleware"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 )
 
-func NewRouter(cfg *config.Config, logger *slog.Logger, services *app.Services) chi.Router {
+func NewRouter(
+	cfg *config.Config,
+	logger *slog.Logger,
+	middlewares *presentation.Middlewares,
+	services *app.Services,
+) chi.Router {
 	r := chi.NewRouter()
 
 	r.Use(chimiddleware.RealIP)
@@ -29,7 +35,7 @@ func NewRouter(cfg *config.Config, logger *slog.Logger, services *app.Services) 
 
 	r.Route("/api", func(r chi.Router) {
 		authhttp.RegisterAuthRoutes(r, services.AuthService)
-		attendancehttp.RegisterAttendanceRoutes(r, services.AttendanceService)
+		attendancehttp.RegisterAttendanceRoutes(r, middlewares, services.AttendanceService)
 	})
 
 	return r

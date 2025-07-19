@@ -12,20 +12,28 @@ import (
 
 const saveEmployeeAttendance = `-- name: SaveEmployeeAttendance :exec
 INSERT INTO attendance (employee_id, timestamp, type, created_by, updated_by)
-VALUES ($1, $2, $3, $4, $5)
+VALUES ((
+			select id
+			from employee
+			where username = $1
+			),
+		$2,
+		$3,
+		$4,
+		$5)
 `
 
 type SaveEmployeeAttendanceParams struct {
-	EmployeeID int32          `db:"employee_id"`
-	Timestamp  time.Time      `db:"timestamp"`
-	Type       AttendanceType `db:"type"`
-	CreatedBy  string         `db:"created_by"`
-	UpdatedBy  string         `db:"updated_by"`
+	Username  string         `db:"username"`
+	Timestamp time.Time      `db:"timestamp"`
+	Type      AttendanceType `db:"type"`
+	CreatedBy string         `db:"created_by"`
+	UpdatedBy string         `db:"updated_by"`
 }
 
 func (q *Queries) SaveEmployeeAttendance(ctx context.Context, arg *SaveEmployeeAttendanceParams) error {
 	_, err := q.db.Exec(ctx, saveEmployeeAttendance,
-		arg.EmployeeID,
+		arg.Username,
 		arg.Timestamp,
 		arg.Type,
 		arg.CreatedBy,

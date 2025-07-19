@@ -11,5 +11,6 @@ type AttendanceRepository interface {
 }
 
 type AttendanceService interface {
-	ClockIn(ctx context.Context, employeeID int64) (err error)
+	ClockIn(ctx context.Context, username string) (err error)
+	ClockOut(ctx context.Context, username string) (err error)
 }

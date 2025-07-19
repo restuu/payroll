@@ -25,7 +25,11 @@ type LoginResult struct {
 	ExpiresAt   string `json:"expires_at"`
 }
 
-type JWTClaims struct {
+type JWTPayloads struct {
 	Username string `json:"username"`
+}
+
+type JWTClaims struct {
+	JWTPayloads
 	jwt.RegisteredClaims
 }
