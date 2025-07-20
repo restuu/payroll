@@ -11,6 +11,7 @@ type AuthRepository interface {
 	InsertEmployee(ctx context.Context, arg *repository.InsertEmployeeParams) error
 	FindEmployeeByUsername(ctx context.Context, username string) (*repository.Employee, error)
 	InsertEmployeeRole(ctx context.Context, arg *repository.InsertEmployeeRoleParams) error
+	FindRolesByUsername(ctx context.Context, username string) ([]repository.RoleType, error)
 }
 
 type AuthService interface {

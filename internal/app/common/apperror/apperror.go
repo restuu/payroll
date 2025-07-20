@@ -54,9 +54,10 @@ func (a *AppError) Error() string {
 }
 
 var (
-	ErrConflict     = &AppError{code: Conflict, msg: "Conflict", httpCode: http.StatusConflict}
-	ErrNotFound     = &AppError{code: NotFound, msg: "Not Found", httpCode: http.StatusNotFound}
-	ErrUnauthorized = &AppError{code: Unauthorized, msg: "Unauthorized", httpCode: http.StatusUnauthorized}
+	ErrConflict       = &AppError{code: Conflict, msg: "Conflict", httpCode: http.StatusConflict}
+	ErrNotFound       = &AppError{code: NotFound, msg: "Not Found", httpCode: http.StatusNotFound}
+	ErrUnauthorized   = &AppError{code: Unauthorized, msg: "Unauthorized", httpCode: http.StatusUnauthorized}
+	ErrInternalServer = &AppError{code: InternalServerError, msg: "Internal Server Error", httpCode: http.StatusInternalServerError}
 )
 
 func WrapWith(appError *AppError, err error) *AppError {

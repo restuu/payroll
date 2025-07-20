@@ -2,6 +2,7 @@ package log
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"os"
 
@@ -64,4 +65,10 @@ func SetDefaultLogger(cfg *config.Config) *slog.Logger {
 
 func WithErrorAttr(err error) slog.Attr {
 	return slog.String("error", err.Error())
+}
+
+func WithMetadata(metadata any) slog.Attr {
+	b, _ := json.Marshal(metadata)
+
+	return slog.String("metadata", string(b))
 }

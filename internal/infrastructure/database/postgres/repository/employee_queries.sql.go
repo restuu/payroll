@@ -54,6 +54,34 @@ func (q *Queries) FindEmployeeByUsername(ctx context.Context, username string) (
 	return &i, err
 }
 
+const findRolesByUsername = `-- name: FindRolesByUsername :many
+SELECT name
+FROM role
+JOIN employee_role on employee_role.role_id = role.id
+JOIN employee on employee.id = employee_role.employee_id
+WHERE employee.username = $1
+`
+
+func (q *Queries) FindRolesByUsername(ctx context.Context, username string) ([]RoleType, error) {
+	rows, err := q.db.Query(ctx, findRolesByUsername, username)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RoleType
+	for rows.Next() {
+		var name RoleType
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		items = append(items, name)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertEmployee = `-- name: InsertEmployee :exec
 INSERT INTO employee (username, password, salary, created_by, updated_by)
 VALUES ($1, $2, $3, $4, $5)

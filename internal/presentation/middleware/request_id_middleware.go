@@ -26,3 +26,8 @@ func RequestID() func(next http.Handler) http.Handler {
 		return http.HandlerFunc(fn)
 	}
 }
+
+func GetRequestIDFromContext(ctx context.Context) string {
+	id, _ := ctx.Value(log.RequestIDCtxKey).(string)
+	return id
+}

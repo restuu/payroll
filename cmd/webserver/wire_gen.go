@@ -12,9 +12,12 @@ import (
 	"payroll/internal/app/auth/dto"
 	"payroll/internal/app/auth/repository"
 	service2 "payroll/internal/app/auth/service"
+	"payroll/internal/app/common/message"
+	service3 "payroll/internal/app/payroll/service"
 	"payroll/internal/infrastructure/config"
 	"payroll/internal/infrastructure/database/postgres"
 	"payroll/internal/infrastructure/log"
+	"payroll/internal/infrastructure/messagebus"
 	"payroll/internal/presentation"
 	"payroll/internal/presentation/middleware"
 	"payroll/internal/presentation/router"
@@ -31,37 +34,48 @@ func NewWebServer() (*WebServer, error) {
 	}
 	serverConfig := configConfig.Server
 	logger := log.SetDefaultLogger(configConfig)
-	jwt := ProvideJWT(configConfig)
+	authConfig := configConfig.Auth
+	jwt := ProvideJWT(authConfig)
 	jwtAuthMiddleware := middleware.WithJWTAuth(jwt)
-	middlewares := &presentation.Middlewares{
-		WithJWTAuth: jwtAuthMiddleware,
-	}
 	databaseConfig := configConfig.Database
 	querier, err := postgres.Connect(databaseConfig)
 	if err != nil {
 		return nil, err
 	}
-	attendanceService := service.NewAttendanceService(querier)
-	authConfig := configConfig.Auth
 	authRepository := repository.NewAuthRepository(querier)
+	isAdminMiddleware := middleware.IsAdmin(authRepository)
+	middlewares := &presentation.Middlewares{
+		WithJWTAuth: jwtAuthMiddleware,
+		IsAdmin:     isAdminMiddleware,
+	}
+	attendanceService := service.NewAttendanceService(querier)
 	authService := service2.NewAuthService(authConfig, authRepository, jwt)
+	kafkaConfig := configConfig.Kafka
+	client, err := messagebus.NewKafkaClient(kafkaConfig)
+	if err != nil {
+		return nil, err
+	}
+	messagePublisher := message.NewMessagePublisher(kafkaConfig, client)
+	payrollService := service3.NewPayrollService(messagePublisher)
 	services := &app.Services{
 		AttendanceService: attendanceService,
 		AuthService:       authService,
+		PayrollService:    payrollService,
 	}
 	chiRouter := router.NewRouter(configConfig, logger, middlewares, services)
 	httpServer := server.NewServer(serverConfig, chiRouter)
 	webServer := &WebServer{
-		cfg: configConfig,
-		srv: httpServer,
+		cfg:         configConfig,
+		srv:         httpServer,
+		kafkaClient: client,
 	}
 	return webServer, nil
 }
 
 // wire.go:
 
-func ProvideJWT(cfg *config.Config) jwt.JWT[*dto.JWTClaims] {
+func ProvideJWT(cfg config.AuthConfig) jwt.JWT[*dto.JWTClaims] {
 	return jwt.NewJWT[*dto.JWTClaims](jwt.Config{
-		SecretKey: cfg.Auth.JWTSecret,
+		SecretKey: cfg.JWTSecret,
 	})
 }

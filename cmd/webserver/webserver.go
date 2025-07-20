@@ -11,14 +11,24 @@ import (
 	"time"
 
 	"payroll/internal/infrastructure/config"
+	"payroll/internal/infrastructure/messagebus"
+
+	"github.com/twmb/franz-go/pkg/kgo"
 )
 
 type WebServer struct {
-	cfg *config.Config // Assuming cfg.Server.ShutdownTimeout is a time.Duration
-	srv *http.Server
+	cfg         *config.Config
+	srv         *http.Server
+	kafkaClient *kgo.Client
 }
 
 func (w *WebServer) Start() {
+	// Start Kafka consumer
+	go func() {
+		log.Println("Starting Kafka consumer...")
+		messagebus.StartConsumer(context.Background(), w.kafkaClient)
+	}()
+
 	serverErrors := make(chan error, 1)
 	// Start the server in a separate goroutine so that it doesn't block.
 	go func() {
@@ -55,6 +65,10 @@ func (w *WebServer) Stop() {
 	}
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), timeout)
 	defer shutdownCancel()
+
+	// Close the Kafka client.
+	log.Println("Closing Kafka client...")
+	w.kafkaClient.Close()
 
 	// srv.Shutdown() gracefully shuts down the server.
 	if err := w.srv.Shutdown(shutdownCtx); err != nil {

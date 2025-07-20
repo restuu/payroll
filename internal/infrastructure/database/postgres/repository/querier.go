@@ -11,6 +11,7 @@ import (
 type Querier interface {
 	FindEmployeeByID(ctx context.Context, id int32) (*Employee, error)
 	FindEmployeeByUsername(ctx context.Context, username string) (*Employee, error)
+	FindRolesByUsername(ctx context.Context, username string) ([]RoleType, error)
 	InsertEmployee(ctx context.Context, arg *InsertEmployeeParams) error
 	InsertEmployeeRole(ctx context.Context, arg *InsertEmployeeRoleParams) error
 	SaveEmployeeAttendance(ctx context.Context, arg *SaveEmployeeAttendanceParams) error

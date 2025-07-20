@@ -7,6 +7,7 @@ import (
 	"payroll/internal/app"
 	attendancehttp "payroll/internal/app/attendance/delivery/http"
 	authhttp "payroll/internal/app/auth/delivery/http"
+	payrollhttp "payroll/internal/app/payroll/delivery/http"
 	"payroll/internal/infrastructure/config"
 	"payroll/internal/presentation"
 	"payroll/internal/presentation/middleware"
@@ -36,6 +37,7 @@ func NewRouter(
 	r.Route("/api", func(r chi.Router) {
 		authhttp.RegisterAuthRoutes(r, services.AuthService)
 		attendancehttp.RegisterAttendanceRoutes(r, middlewares, services.AttendanceService)
+		payrollhttp.RegisterPayrollRoutes(r, middlewares, services.PayrollService)
 	})
 
 	return r

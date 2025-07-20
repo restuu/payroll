@@ -17,9 +17,14 @@ services:
       - DATABASE_USER=${POSTGRES_USER:-dev_user}
       - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-dev_password}
       - DATABASE_DBNAME=${POSTGRES_DB:-payroll_dev_db}
+        # --- Kafka Connection (from app's perspective) ---
+        # The hostname 'kafka' is the service name of our kafka container
+      - KAFKA_BROKERS=kafka:9092
     depends_on:
       db:
         condition: service_healthy # Wait for db to be ready to accept connections
+      kafka:
+        condition: service_healthy # Wait for kafka to be ready
     networks:
       - payroll-net
 
@@ -40,6 +45,53 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - payroll-net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    restart: always
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - payroll-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    restart: always
+    ports:
+      # Expose a port for local tools to connect to Kafka if needed
+      - "9094:9094"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      # Listeners for internal (container-to-container) and external (host-to-container) traffic
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server kafka:9092 --list"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - payroll-net
+
+  kafka-ui:
+    image: redpandadata/console:latest
+    restart: always
+    ports:
+      - "8081:8080" # Access the UI at http://localhost:8081
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_BROKERS: "kafka:9092"
     networks:
       - payroll-net
 

@@ -6,4 +6,5 @@ import (
 
 type Middlewares struct {
 	WithJWTAuth middleware.JWTAuthMiddleware
+	IsAdmin     middleware.IsAdminMiddleware
 }

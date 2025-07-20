@@ -70,3 +70,12 @@ func SendUnauthenticated(w http.ResponseWriter) {
 		Error: "Unauthenticated",
 	})
 }
+
+func SendInternalServerError(w http.ResponseWriter) {
+	w.Header().Set(HeaderContentType, MimeApplicationJSON)
+	w.WriteHeader(http.StatusInternalServerError)
+	_ = json.NewEncoder(w).Encode(HTTPResponse{
+		Code:  "FAILED",
+		Error: apperror.ErrInternalServer.Msg(),
+	})
+}

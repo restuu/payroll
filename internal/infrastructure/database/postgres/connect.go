@@ -11,6 +11,7 @@ import (
 	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 )
 
 func Connect(cfg config.DatabaseConfig) (repository.Querier, error) {
@@ -37,6 +38,8 @@ func Connect(cfg config.DatabaseConfig) (repository.Querier, error) {
 		pgxdecimal.Register(conn.TypeMap())
 		return nil
 	}
+
+	stdlib.OpenDBFromPool(conn)
 
 	if err = conn.Ping(context.Background()); err != nil {
 		return nil, err
