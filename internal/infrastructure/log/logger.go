@@ -15,6 +15,10 @@ type requestIDCtxKey int
 
 const RequestIDCtxKey requestIDCtxKey = 0
 
+func SetRequestIDContext(ctx context.Context, reqID string) context.Context {
+	return context.WithValue(ctx, RequestIDCtxKey, reqID)
+}
+
 type ContextJSONHandler struct {
 	jsonHandler slog.Handler
 }

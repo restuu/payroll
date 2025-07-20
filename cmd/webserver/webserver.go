@@ -5,11 +5,11 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"payroll/internal/app"
 	"payroll/internal/infrastructure/config"
 	"payroll/internal/infrastructure/messagebus"
 
@@ -19,14 +19,20 @@ import (
 type WebServer struct {
 	cfg         *config.Config
 	srv         *http.Server
+	services    *app.Services
 	kafkaClient *kgo.Client
 }
 
 func (w *WebServer) Start() {
-	// Start Kafka consumer
+	// Create a context that is canceled when a shutdown signal is received.
+	// This is the idiomatic way to handle graceful shutdowns.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop() // Important to release resources used by NotifyContext.
+
+	// Start Kafka consumer with the cancellable context.
 	go func() {
 		log.Println("Starting Kafka consumer...")
-		messagebus.StartConsumer(context.Background(), w.kafkaClient)
+		messagebus.StartConsumer(ctx, w.kafkaClient, w.cfg.Kafka, w.services)
 	}()
 
 	serverErrors := make(chan error, 1)
@@ -36,23 +42,19 @@ func (w *WebServer) Start() {
 		serverErrors <- w.srv.ListenAndServe()
 	}()
 
-	// Set up a channel to listen for OS signals for graceful shutdown.
-	quit := make(chan os.Signal, 1)
-	// Listen for interrupt (Ctrl+C) or termination signals. SIGKILL cannot be caught.
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	// Block until we receive a shutdown signal or the server fails.
+	// Block until the context is canceled (due to a signal) or the server fails.
 	select {
 	case err := <-serverErrors:
 		// ListenAndServe will return ErrServerClosed on a graceful shutdown.
 		// We only want to fatal on other unexpected errors.
 		if !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("Server error: %v", err)
+			log.Fatalf("server error: %v", err)
 		}
-	case sig := <-quit:
-		log.Printf("Received signal: %v. Initiating graceful shutdown...", sig)
-		w.Stop()
+	case <-ctx.Done():
+		log.Printf("shutdown signal received: %v", ctx.Err())
 	}
+
+	w.Stop()
 	log.Println("Server has shut down.")
 }
 

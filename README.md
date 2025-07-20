@@ -68,6 +68,19 @@ If you prefer to run the application directly on your machine:
     ./out/payroll-server
     ```
 
+## Kafka Integration
+
+This service uses Apache Kafka for asynchronous event handling. The Docker Compose setup includes the necessary services to run Kafka locally.
+
+*   **Kafka:** The message broker itself.
+*   **Zookeeper:** Required for Kafka coordination.
+*   **Kafka UI (Redpanda Console):** A web-based user interface for managing and monitoring Kafka. You can access it at [http://localhost:8081](http://localhost:8081).
+
+When the application starts, it subscribes to the following topics:
+*   `payroll-generate`
+
+Messages sent to these topics will be processed by the corresponding handlers in the `internal/presentation/messaging/handlers` package.
+
 ## Available `make` Commands
 
 -   `build`: Builds the Go binary into the `out/` directory.

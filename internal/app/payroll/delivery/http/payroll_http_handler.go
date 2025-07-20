@@ -44,6 +44,7 @@ func (h *payrollHTTPHandler) generate(r *http.Request) (*dto.GeneratePayrollTask
 
 	var req dto.GeneratePayrollTaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		slog.ErrorContext(ctx, "payrollHTTPHandler.generate failed to decode request body", log.WithErrorAttr(err))
 		return nil, fmt.Errorf("payrollHTTPHandler.generate failed to decode request body: %w", err)
 	}
 

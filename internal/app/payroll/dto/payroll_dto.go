@@ -13,7 +13,7 @@ func (y YearMonth) String() string {
 }
 
 func (y YearMonth) TimeLayout() string {
-	return "YYYY-MM"
+	return "2006-01"
 }
 
 func (y YearMonth) IsValid() bool {

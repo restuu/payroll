@@ -67,6 +67,7 @@ func NewWebServer() (*WebServer, error) {
 	webServer := &WebServer{
 		cfg:         configConfig,
 		srv:         httpServer,
+		services:    services,
 		kafkaClient: client,
 	}
 	return webServer, nil

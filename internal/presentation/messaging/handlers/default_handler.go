@@ -1,12 +1,15 @@
 package handlers
 
 import (
-	"log"
+	"log/slog"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
 // HandleDefault processes messages from any other topic.
 func HandleDefault(record *kgo.Record) {
-	log.Printf("Received message from unhandled topic '%s'. Raw value: %s", record.Topic, string(record.Value))
+	slog.Warn("Received message from unhandled topic",
+		slog.String("topic", record.Topic),
+		slog.String("key", string(record.Key)),
+		slog.Int64("offset", record.Offset))
 }

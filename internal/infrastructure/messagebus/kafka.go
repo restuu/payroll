@@ -2,11 +2,13 @@ package messagebus
 
 import (
 	"context"
-	"log"
 	"log/slog"
 
+	"payroll/internal/app"
 	"payroll/internal/infrastructure/config"
+	"payroll/internal/infrastructure/log"
 	"payroll/internal/presentation/messaging"
+	"payroll/internal/presentation/messaging/topics"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 )
@@ -19,6 +21,9 @@ func NewKafkaClient(cfg config.KafkaConfig) (*kgo.Client, error) {
 		kgo.ConsumerGroup(cfg.ConsumerGroup),
 		kgo.ConsumeTopics(getTopicNames(cfg)...),
 		kgo.DisableAutoCommit(),
+		kgo.AllowAutoTopicCreation(),
+		kgo.ConsumeStartOffset(kgo.NewOffset().AtEnd()),
+		kgo.ConsumeResetOffset(kgo.NewOffset().AtEnd()),
 		// Add other options like authentication, group id, etc. as needed
 	}
 
@@ -34,50 +39,60 @@ func NewKafkaClient(cfg config.KafkaConfig) (*kgo.Client, error) {
 	return client, nil
 }
 
-func StartConsumer(ctx context.Context, client *kgo.Client) {
+func StartConsumer(ctx context.Context, client *kgo.Client, cfg config.KafkaConfig, services *app.Services) {
+	slog.InfoContext(ctx, "Start consuming for topics", slog.Any("topics", client.GetConsumeTopics()))
+
 	for {
 		fetches := client.PollFetches(ctx)
 		if fetches.IsClientClosed() || ctx.Err() != nil {
+			slog.InfoContext(ctx, "consumer stopped", "client_closed", fetches.IsClientClosed(), "ctx_err", ctx.Err())
 			return
 		}
 
 		if errs := fetches.Errors(); len(errs) > 0 {
 			// All errors are retried internally, so handle FATAL errors only.
+			// We log as an error instead of fatal to prevent a single partition
+			// issue from crashing the entire application.
 			for _, err := range errs {
-				log.Fatalf("FATAL error consuming from topic %s: %v", err.Topic, err.Err)
+				slog.ErrorContext(ctx, "kafka consumer error",
+					slog.String("topic", err.Topic),
+					slog.Int("partition", int(err.Partition)),
+					slog.Any("error", err.Err),
+				)
 			}
 		}
 
-		if fetches.NumRecords() == 0 {
-			continue
+		successfulRecords := make([]*kgo.Record, 0, fetches.NumRecords())
+
+		// Process all records from the fetched batch.
+		iter := fetches.RecordIter()
+		for !iter.Done() {
+			record := iter.Next()
+			if err := messaging.Dispatch(record, cfg, services); err == nil {
+				successfulRecords = append(successfulRecords, record)
+			}
 		}
 
-		iter := fetches.RecordIter()
-		if iter.Done() {
-			continue
-		}
-		record := iter.Next()
-		messaging.Dispatch(record)
-		if err := client.CommitRecords(record.Context, record); err != nil {
-			slog.ErrorContext(
-				ctx, "Failed to commit record",
-				slog.String("topic", record.Topic),
-				slog.Int64("partition", int64(record.Partition)),
-				slog.Int64("offset", record.Offset),
-				slog.Any("error", err),
-			)
+		if err := client.CommitRecords(ctx, successfulRecords...); err != nil {
+			slog.ErrorContext(ctx, "failed to commit records", log.WithErrorAttr(err))
 		}
 	}
 }
 
-func getTopicNames(cfg config.KafkaConfig) (topics []string) {
-	for k, topicConfig := range cfg.Topics {
-		name := topicConfig.Name
-		if name == "" {
-			name = k
-		}
-		topics = append(topics, name)
+func getTopicNames(cfg config.KafkaConfig) []string {
+	topicNames := []string{
+		topics.PayrollGenerate,
 	}
 
-	return topics
+	if len(cfg.Topics) == 0 {
+		return topicNames
+	}
+
+	newTopicNames := make([]string, len(topicNames))
+
+	for i, name := range topicNames {
+		newTopicNames[i] = cfg.Topics.GetName(name)
+	}
+
+	return newTopicNames
 }

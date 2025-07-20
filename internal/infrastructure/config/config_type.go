@@ -41,7 +41,7 @@ type AuthConfig struct {
 type KafkaConfig struct {
 	Brokers       []string `mapstructure:"brokers" yaml:"brokers" validate:"required"`
 	ConsumerGroup string   `mapstructure:"consumer_group" yaml:"consumer_group" validate:"required"`
-	Topics        Topics   `mapstructure:"topics" yaml:"topics" validate:"required"`
+	Topics        Topics   `mapstructure:"topics" yaml:"topics"`
 }
 
 type TopicConfig struct {
